@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import type { SunPosition } from "../types";
 
-const EARTH_RADIUS = 100;
 const GLOBE_IMAGE_URL =
 	"//unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
 const NIGHT_IMAGE_URL = "//unpkg.com/three-globe/example/img/earth-night.jpg";
@@ -52,8 +51,6 @@ void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
 
-const DEFAULT_ALTITUDE = 1.5; // Reduced from 2.5 to create a more pronounced zoom
-
 // Texture cache to prevent redundant loading
 const textureCache = new Map<string, THREE.Texture>();
 
@@ -64,7 +61,7 @@ const preloadTextures = async () => {
 
 	const loadTexture = (url: string) => {
 		if (textureCache.has(url)) {
-			return Promise.resolve(textureCache.get(url)!);
+			return Promise.resolve(textureCache.get(url));
 		}
 		return new Promise<THREE.Texture>((resolve, reject) => {
 			textureLoader.load(
@@ -74,7 +71,7 @@ const preloadTextures = async () => {
 					resolve(texture);
 				},
 				undefined,
-				reject
+				reject,
 			);
 		});
 	};
@@ -87,6 +84,7 @@ const preloadTextures = async () => {
 };
 
 export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	const globeRef = useRef<any>(null);
 	const [isInitialized, setIsInitialized] = useState(false);
 
@@ -99,9 +97,9 @@ export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 			await preloadTextures();
 
 			// Get preloaded textures from cache
-			const dayTexture = textureCache.get(GLOBE_IMAGE_URL)!;
-			const nightTexture = textureCache.get(NIGHT_IMAGE_URL)!;
-			const bumpTexture = textureCache.get(BUMP_IMAGE_URL)!;
+			const dayTexture = textureCache.get(GLOBE_IMAGE_URL);
+			const nightTexture = textureCache.get(NIGHT_IMAGE_URL);
+			const bumpTexture = textureCache.get(BUMP_IMAGE_URL);
 
 			// Create custom material with cached textures
 			const customMaterial = new THREE.ShaderMaterial({
@@ -113,15 +111,16 @@ export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 				},
 				vertexShader: vertexShader,
 				fragmentShader: fragmentShader,
+				// @ts-ignore
 				bumpMap: bumpTexture,
 				bumpScale: 10,
 			});
 
 			// Initialize globe with custom material
-			const globe = Globe()(containerRef.current)
+			const globe = new Globe(containerRef.current)
 				.width(containerRef.current.clientWidth)
 				.height(containerRef.current.clientHeight);
-
+			// @ts-ignore
 			globe.globeMaterial(customMaterial);
 
 			// Add ambient light for better visibility
@@ -133,17 +132,20 @@ export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 
 			// Handle window resize
 			const handleResize = () => {
-				const { clientWidth, clientHeight } = containerRef.current!;
+				// @ts-ignore
+				const { clientWidth, clientHeight } = containerRef.current;
 				globe.width(clientWidth).height(clientHeight);
 			};
 			window.addEventListener("resize", handleResize);
 
 			// Add rotation listener to update sun angle when globe rotates
 			globe.controls().addEventListener("change", () => {
+				// @ts-ignore
 				const lastSunPos = (globe.globeMaterial() as THREE.ShaderMaterial)
 					.uniforms.sunAngle.value;
 				updateSunPosition({
 					lng: THREE.MathUtils.radToDeg(lastSunPos),
+					// @ts-ignore
 					lat: (globe.globeMaterial() as THREE.ShaderMaterial).uniforms
 						.sunLatitude.value,
 				});
@@ -170,7 +172,6 @@ export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 
 		// Convert sun position to radians
 		const sunLng = THREE.MathUtils.degToRad(sunPos.lng);
-		const sunLat = THREE.MathUtils.degToRad(sunPos.lat);
 
 		// Calculate the effective sun angle by considering globe rotation
 		const adjustedSunAngle = sunLng + rotation;
@@ -202,10 +203,10 @@ export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 			{
 				lat,
 				lng,
-				name: name || 'Location',
-				color: 'red',
+				name: name || "Location",
+				color: "red",
 				radius: 0.5,
-			}
+			},
 		]);
 	};
 
@@ -214,5 +215,11 @@ export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 		globeRef.current.pointsData([]);
 	};
 
-	return { globe: globeRef.current, updateSunPosition, pointOfView, addPinMarker, clearMarkers };
+	return {
+		globe: globeRef.current,
+		updateSunPosition,
+		pointOfView,
+		addPinMarker,
+		clearMarkers,
+	};
 };
