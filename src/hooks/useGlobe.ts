@@ -54,72 +54,112 @@ void main() {
 
 const DEFAULT_ALTITUDE = 1.5; // Reduced from 2.5 to create a more pronounced zoom
 
+// Texture cache to prevent redundant loading
+const textureCache = new Map<string, THREE.Texture>();
+
+// Preload textures function
+const preloadTextures = async () => {
+	const textureLoader = new THREE.TextureLoader();
+	const urls = [GLOBE_IMAGE_URL, NIGHT_IMAGE_URL, BUMP_IMAGE_URL];
+
+	const loadTexture = (url: string) => {
+		if (textureCache.has(url)) {
+			return Promise.resolve(textureCache.get(url)!);
+		}
+		return new Promise<THREE.Texture>((resolve, reject) => {
+			textureLoader.load(
+				url,
+				(texture) => {
+					textureCache.set(url, texture);
+					resolve(texture);
+				},
+				undefined,
+				reject
+			);
+		});
+	};
+
+	try {
+		await Promise.all(urls.map(loadTexture));
+	} catch (error) {
+		console.error("Failed to preload textures:", error);
+	}
+};
+
 export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 	const globeRef = useRef<any>(null);
 	const [isInitialized, setIsInitialized] = useState(false);
 
 	useEffect(() => {
-		if (!containerRef.current || isInitialized) return;
+		// Preload textures before initializing
+		const initializeGlobe = async () => {
+			if (!containerRef.current || isInitialized) return;
 
-		// Load textures
-		const textureLoader = new THREE.TextureLoader();
-		const dayTexture = textureLoader.load(GLOBE_IMAGE_URL);
-		const nightTexture = textureLoader.load(NIGHT_IMAGE_URL);
-		const bumpTexture = textureLoader.load(BUMP_IMAGE_URL);
+			// Preload textures first
+			await preloadTextures();
 
-		// Create custom material
-		const customMaterial = new THREE.ShaderMaterial({
-			uniforms: {
-				dayTexture: { value: dayTexture },
-				nightTexture: { value: nightTexture },
-				sunAngle: { value: 0.0 },
-				sunLatitude: { value: 0.0 },
-			},
-			vertexShader: vertexShader,
-			fragmentShader: fragmentShader,
-			bumpMap: bumpTexture,
-			bumpScale: 10,
-		});
+			// Get preloaded textures from cache
+			const dayTexture = textureCache.get(GLOBE_IMAGE_URL)!;
+			const nightTexture = textureCache.get(NIGHT_IMAGE_URL)!;
+			const bumpTexture = textureCache.get(BUMP_IMAGE_URL)!;
 
-		// Initialize globe with custom material
-		const globe = Globe()(containerRef.current)
-			.width(containerRef.current.clientWidth)
-			.height(containerRef.current.clientHeight);
-
-		globe.globeMaterial(customMaterial);
-
-		// Add ambient light for better visibility
-		const ambientLight = new THREE.AmbientLight(0x333333);
-		globe.scene().add(ambientLight);
-
-		globeRef.current = globe;
-		setIsInitialized(true);
-
-		// Handle window resize
-		const handleResize = () => {
-			const { clientWidth, clientHeight } = containerRef.current!;
-			globe.width(clientWidth).height(clientHeight);
-		};
-		window.addEventListener("resize", handleResize);
-
-		// Add rotation listener to update sun angle when globe rotates
-		globe.controls().addEventListener("change", () => {
-			const lastSunPos = (globe.globeMaterial() as THREE.ShaderMaterial)
-				.uniforms.sunAngle.value;
-			updateSunPosition({
-				lng: THREE.MathUtils.radToDeg(lastSunPos),
-				lat: (globe.globeMaterial() as THREE.ShaderMaterial).uniforms
-					.sunLatitude.value,
+			// Create custom material with cached textures
+			const customMaterial = new THREE.ShaderMaterial({
+				uniforms: {
+					dayTexture: { value: dayTexture },
+					nightTexture: { value: nightTexture },
+					sunAngle: { value: 0.0 },
+					sunLatitude: { value: 0.0 },
+				},
+				vertexShader: vertexShader,
+				fragmentShader: fragmentShader,
+				bumpMap: bumpTexture,
+				bumpScale: 10,
 			});
-		});
 
-		return () => {
-			window.removeEventListener("resize", handleResize);
-			// Clean up rotation listener
-			if (globeRef.current) {
-				globeRef.current.controls().removeEventListener("change");
-			}
+			// Initialize globe with custom material
+			const globe = Globe()(containerRef.current)
+				.width(containerRef.current.clientWidth)
+				.height(containerRef.current.clientHeight);
+
+			globe.globeMaterial(customMaterial);
+
+			// Add ambient light for better visibility
+			const ambientLight = new THREE.AmbientLight(0x333333);
+			globe.scene().add(ambientLight);
+
+			globeRef.current = globe;
+			setIsInitialized(true);
+
+			// Handle window resize
+			const handleResize = () => {
+				const { clientWidth, clientHeight } = containerRef.current!;
+				globe.width(clientWidth).height(clientHeight);
+			};
+			window.addEventListener("resize", handleResize);
+
+			// Add rotation listener to update sun angle when globe rotates
+			globe.controls().addEventListener("change", () => {
+				const lastSunPos = (globe.globeMaterial() as THREE.ShaderMaterial)
+					.uniforms.sunAngle.value;
+				updateSunPosition({
+					lng: THREE.MathUtils.radToDeg(lastSunPos),
+					lat: (globe.globeMaterial() as THREE.ShaderMaterial).uniforms
+						.sunLatitude.value,
+				});
+			});
+
+			return () => {
+				window.removeEventListener("resize", handleResize);
+				// Clean up rotation listener
+				if (globeRef.current) {
+					globeRef.current.controls().removeEventListener("change");
+				}
+			};
 		};
+
+		// Call the async initialization function
+		initializeGlobe();
 	}, [containerRef, isInitialized]);
 
 	const updateSunPosition = (sunPos: SunPosition) => {
