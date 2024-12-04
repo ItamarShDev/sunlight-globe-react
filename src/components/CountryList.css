@@ -1,0 +1,79 @@
+.country-list-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 300px;
+    max-height: 80vh;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.country-search {
+    width: calc(100% - 24px);
+    padding: 12px;
+    border: none;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    outline: none;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px 8px 0 0;
+}
+
+.country-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(80vh - 60px);
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
+}
+
+.country-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.country-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 0 0 8px 0;
+}
+
+.country-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.country-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.country-item:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.country-item.selected {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.country-name {
+    flex-grow: 1;
+    text-align: left;
+    margin-right: 10px;
+}
+
+.country-time {
+    color: #666;
+    margin-left: auto;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
