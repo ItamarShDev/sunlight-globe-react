@@ -19,20 +19,51 @@ export const CountryList = ({ onSelectCountry }: CountryListProps) => {
             try {
                 setIsLoading(true);
                 setError(null);
-                const response = await fetch('https://restcountries.com/v3.1/all');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch countries');
+                
+                // Try multiple endpoints
+                const endpoints = [
+                    'https://restcountries.com/v3.1/all',
+                    'https://restcountries.com/v2/all',
+                    'https://countries-api.com/countries'
+                ];
+
+                let data = null;
+                for (const endpoint of endpoints) {
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            continue;
+                        }
+
+                        data = await response.json();
+                        break;
+                    } catch (fetchError) {
+                    }
                 }
-                const data = await response.json();
+
+                if (!data) {
+                    throw new Error('Failed to fetch countries from all endpoints');
+                }
+
                 const validCountries = data.filter((country: any) => 
                     country.name?.common && 
-                    country.latlng?.length === 2
+                    country.latlng?.length === 2 &&
+                    country.timezones
                 );
-                console.log('Sample country data:', validCountries.slice(0, 5));
+
+                if (validCountries.length === 0) {
+                    throw new Error('No valid countries found');
+                }
+
                 setCountries(validCountries);
             } catch (error) {
-                console.error('Failed to fetch countries:', error);
-                setError('Failed to load countries. Please try again.');
+                setError(`Failed to load countries: ${error instanceof Error ? error.message : 'Unknown error'}`);
             } finally {
                 setIsLoading(false);
             }
@@ -40,6 +71,45 @@ export const CountryList = ({ onSelectCountry }: CountryListProps) => {
 
         fetchCountries();
     }, []);
+
+    const UTC_TO_TIMEZONE: { [key: string]: string } = {
+        'UTC+00:00': 'UTC',
+        'UTC+01:00': 'Europe/London',
+        'UTC+02:00': 'Europe/Athens',
+        'UTC+03:00': 'Europe/Moscow',
+        'UTC+04:00': 'Asia/Dubai',
+        'UTC+05:00': 'Asia/Tashkent',
+        'UTC+06:00': 'Asia/Dhaka',
+        'UTC+07:00': 'Asia/Bangkok',
+        'UTC+08:00': 'Asia/Singapore',
+        'UTC+09:00': 'Asia/Tokyo',
+        'UTC+10:00': 'Australia/Sydney',
+        'UTC+11:00': 'Pacific/Noumea',
+        'UTC+12:00': 'Pacific/Auckland',
+        'UTC-01:00': 'Atlantic/Azores',
+        'UTC-02:00': 'America/Noronha',
+        'UTC-03:00': 'America/Sao_Paulo',
+        'UTC-04:00': 'America/New_York',
+        'UTC-05:00': 'America/Chicago',
+        'UTC-06:00': 'America/Mexico_City',
+        'UTC-07:00': 'America/Denver',
+        'UTC-08:00': 'America/Los_Angeles',
+        'UTC-09:00': 'America/Anchorage',
+        'UTC-10:00': 'Pacific/Honolulu',
+        'UTC-11:00': 'Pacific/Midway',
+        'UTC-12:00': 'Etc/GMT+12'
+    };
+
+    const COUNTRY_TIMEZONE_FALLBACK: { [key: string]: string } = {
+        'United States': 'America/New_York',
+        'Russia': 'Europe/Moscow',
+        'Canada': 'America/Toronto',
+        'Australia': 'Australia/Sydney',
+        'Brazil': 'America/Sao_Paulo',
+        'China': 'Asia/Shanghai',
+        'India': 'Asia/Kolkata',
+        'United Kingdom': 'Europe/London'
+    };
 
     const filteredCountries = countries
         .filter(country => 
@@ -98,60 +168,38 @@ export const CountryList = ({ onSelectCountry }: CountryListProps) => {
                     <div className="country-item">No countries found</div>
                 ) : (
                     filteredCountries.map((country) => {
-                        const timezone = country.timezones?.[0] || 'UTC';
-                        let localTime = 'N/A';
+                        const timezone = country.timezones?.[0] || 'UTC+00:00';
+                        let calculatedTime = 'N/A';
                         
-                        if (timezone) {
-                            try {
-                                // Convert timezone format if it's in UTC+X/-X format
-                                let formattedTimezone = timezone;
-                                if (timezone.startsWith('UTC')) {
-                                    const offset = timezone.replace('UTC', '');
-                                    if (offset === '') {
-                                        formattedTimezone = 'UTC';
-                                    } else {
-                                        // Convert UTC+X/-X to a valid IANA timezone
-                                        const hours = parseInt(offset);
-                                        if (!isNaN(hours)) {
-                                            // Use a reference timezone based on the offset
-                                            const offsetHours = Math.abs(hours);
-                                            if (hours >= 0) {
-                                                formattedTimezone = offsetHours === 8 ? 'Asia/Singapore' :
-                                                    offsetHours === 9 ? 'Asia/Tokyo' :
-                                                    offsetHours === 5.5 ? 'Asia/Kolkata' :
-                                                    offsetHours === 1 ? 'Europe/London' :
-                                                    offsetHours === 2 ? 'Europe/Berlin' :
-                                                    offsetHours === 3 ? 'Europe/Moscow' :
-                                                    offsetHours === 4 ? 'Asia/Dubai' :
-                                                    offsetHours === 5 ? 'Asia/Karachi' :
-                                                    offsetHours === 6 ? 'Asia/Dhaka' :
-                                                    offsetHours === 7 ? 'Asia/Bangkok' :
-                                                    offsetHours === 10 ? 'Asia/Tokyo' :
-                                                    offsetHours === 11 ? 'Asia/Tokyo' :
-                                                    offsetHours === 12 ? 'Pacific/Auckland' : 'UTC';
-                                            } else {
-                                                formattedTimezone = offsetHours === 5 ? 'America/New_York' :
-                                                    offsetHours === 6 ? 'America/Chicago' :
-                                                    offsetHours === 7 ? 'America/Denver' :
-                                                    offsetHours === 8 ? 'America/Los_Angeles' :
-                                                    offsetHours === 3 ? 'America/Sao_Paulo' :
-                                                    offsetHours === 4 ? 'America/Halifax' : 'UTC';
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Use the formatted timezone
-                                const formatter = new Intl.DateTimeFormat('en-US', {
-                                    timeZone: formattedTimezone,
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    hour12: true
-                                });
-                                localTime = formatter.format(new Date());
-                            } catch (error) {
-                                console.warn(`Could not get time for ${country.name.common} with timezone ${timezone}:`, error);
+                        try {
+                            // Determine the most appropriate timezone
+                            let timezoneName = UTC_TO_TIMEZONE[timezone];
+                            
+                            // Fallback for countries with multiple timezones or not in our mapping
+                            if (!timezoneName) {
+                                // Try to find a fallback based on country name
+                                const fallbackCountry = Object.keys(COUNTRY_TIMEZONE_FALLBACK).find(key => 
+                                    country.name.common.includes(key)
+                                );
+                                
+                                timezoneName = fallbackCountry 
+                                    ? COUNTRY_TIMEZONE_FALLBACK[fallbackCountry] 
+                                    : 'UTC';
                             }
+
+                            // Create a formatter with the specific timezone
+                            const formatter = new Intl.DateTimeFormat('en-US', {
+                                timeZone: timezoneName,
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                            });
+
+                            // Get the local time in the specified timezone
+                            calculatedTime = formatter.format(new Date());
+                        } catch (error) {
+                            // Silently handle any time calculation errors
+                            calculatedTime = 'N/A';
                         }
                         
                         return (
@@ -160,8 +208,11 @@ export const CountryList = ({ onSelectCountry }: CountryListProps) => {
                                 className={`country-item ${selectedCountry === country.name.common ? 'selected' : ''}`}
                                 onClick={() => handleCountryClick(country)}
                             >
-                                <span className="country-name">{country.name.common}</span>
-                                <span className="country-time">{localTime}</span>
+                                <div className="country-info">
+                                    <span className="country-name">{country.name.common}</span>
+                                    <span className="country-offset">{timezone.replace('UTC', 'GMT')}</span>
+                                </div>
+                                <span className="country-time">{calculatedTime}</span>
                             </div>
                         );
                     })

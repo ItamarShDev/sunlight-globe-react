@@ -47,11 +47,11 @@
 
 .country-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 10px 15px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s;
     border-bottom: 1px solid #eee;
     font-size: 14px;
 }
@@ -65,15 +65,29 @@
     color: white;
 }
 
-.country-name {
+.country-info {
+    display: flex;
+    flex-direction: column;
     flex-grow: 1;
+    align-items: flex-start;
     text-align: left;
-    margin-right: 10px;
+}
+
+.country-offset {
+    font-size: 0.7em;
+    color: #666;
+    margin-top: 2px;
+    text-align: left;
+}
+
+.country-name {
+    font-weight: 500;
+    text-align: left;
 }
 
 .country-time {
     color: #666;
-    margin-left: auto;
     font-size: 0.9em;
     white-space: nowrap;
+    margin-left: auto;
 }
