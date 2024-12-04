@@ -52,6 +52,8 @@ void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
 
+const DEFAULT_ALTITUDE = 1.5; // Reduced from 2.5 to create a more pronounced zoom
+
 export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 	const globeRef = useRef<any>(null);
 	const [isInitialized, setIsInitialized] = useState(false);
@@ -149,5 +151,28 @@ export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 		globeRef.current.pointOfView({ lat, lng, altitude }, duration);
 	};
 
-	return { globe: globeRef.current, updateSunPosition, pointOfView };
+	const addPinMarker = (lat: number, lng: number, name?: string) => {
+		if (!globeRef.current) return;
+
+		// Remove any existing markers first
+		globeRef.current.pointsData([]);
+
+		// Add a new marker for the selected location
+		globeRef.current.pointsData([
+			{
+				lat,
+				lng,
+				name: name || 'Location',
+				color: 'red',
+				radius: 0.5,
+			}
+		]);
+	};
+
+	const clearMarkers = () => {
+		if (!globeRef.current) return;
+		globeRef.current.pointsData([]);
+	};
+
+	return { globe: globeRef.current, updateSunPosition, pointOfView, addPinMarker, clearMarkers };
 };

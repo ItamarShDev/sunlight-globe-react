@@ -7,12 +7,22 @@ const DEFAULT_ALTITUDE = 2.5;
 
 export const Globe = forwardRef((props, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const { globe, updateSunPosition, pointOfView } = useGlobe(containerRef);
+    const { globe, updateSunPosition, pointOfView, addPinMarker, clearMarkers } = useGlobe(containerRef);
 
     useImperativeHandle(ref, () => ({
         pointOfView: (coords: { lat: number; lng: number; altitude: number }, duration: number) => {
             if (globe) {
                 pointOfView(coords.lat, coords.lng, coords.altitude, duration);
+            }
+        },
+        addPinMarker: (lat: number, lng: number, name?: string) => {
+            if (globe) {
+                addPinMarker(lat, lng, name);
+            }
+        },
+        clearMarkers: () => {
+            if (globe) {
+                clearMarkers();
             }
         }
     }));
