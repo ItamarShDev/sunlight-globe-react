@@ -8,48 +8,9 @@ const GLOBE_IMAGE_URL =
 const NIGHT_IMAGE_URL = "//unpkg.com/three-globe/example/img/earth-night.jpg";
 const BUMP_IMAGE_URL = "//unpkg.com/three-globe/example/img/earth-topology.png";
 
-// Custom shader for day/night cycle
-const fragmentShader = `
-uniform sampler2D dayTexture;
-uniform sampler2D nightTexture;
-uniform float sunAngle;
-uniform float sunLatitude;
-varying vec2 vUv;
-varying vec3 vNormal;
-
-void main() {
-    // Calculate sun direction in world space
-    float lat = radians(sunLatitude);
-    vec3 sunDirection = normalize(vec3(
-        cos(lat) * cos(sunAngle),
-        sin(lat),
-        cos(lat) * sin(sunAngle)
-    ));
-    
-    // Calculate light intensity
-    float intensity = dot(vNormal, sunDirection);
-    
-    // Smoother transition between day and night
-    // Use wider transition zone and cubic smoothstep for more natural look
-    float dayness = smoothstep(-0.2, 0.2, intensity);
-    
-    // Sample textures
-    vec4 dayColor = texture2D(dayTexture, vUv);
-    vec4 nightColor = texture2D(nightTexture, vUv);
-    
-    // Mix colors with smooth transition
-    gl_FragColor = mix(nightColor, dayColor, dayness);
-}`;
-
-const vertexShader = `
-varying vec2 vUv;
-varying vec3 vNormal;
-
-void main() {
-    vUv = uv;
-    vNormal = normalize(normalMatrix * normal);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}`;
+// Import shaders from .vert and .frag files
+import vertexShader from '../shaders/globe.vert?raw';
+import fragmentShader from '../shaders/globe.frag?raw';
 
 // Texture cache to prevent redundant loading
 const textureCache = new Map<string, THREE.Texture>();
@@ -116,8 +77,13 @@ export const useGlobe = (containerRef: React.RefObject<HTMLDivElement>) => {
 				bumpScale: 10,
 			});
 
-			// Initialize globe with custom material
-			const globe = new Globe(containerRef.current)
+			// Initialize globe with custom material and disable antialiasing
+			const globe = new Globe(containerRef.current, {
+				rendererConfig: {
+					antialias: false,
+					powerPreference: "high-performance"
+				}
+			})
 				.width(containerRef.current.clientWidth)
 				.height(containerRef.current.clientHeight);
 			// @ts-ignore

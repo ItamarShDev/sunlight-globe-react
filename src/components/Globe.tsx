@@ -5,7 +5,7 @@ import { getSunPosition } from "../utils/sunPosition";
 const TIME_UPDATE_INTERVAL = 60000; // 1 minute
 const DEFAULT_ALTITUDE = 2.5;
 
-interface GlobeMethods {
+export interface GlobeMethods {
   pointOfView: (coords: { lat: number; lng: number; altitude?: number }, duration: number) => void;
   addPinMarker: (lat: number, lng: number, name: string) => void;
   clearMarkers: () => void;

@@ -1,16 +1,15 @@
 import { useRef } from "react";
 import "./App.css";
 import { CountryList } from "./components/CountryList";
-import { Globe } from "./components/Globe";
+import { Globe, type GlobeMethods } from "./components/Globe";
 
 function App() {
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	const globeRef = useRef<any>(null);
+	const globeRef = useRef<GlobeMethods>(null);
 
-	const handleCountrySelect = (lat: number, lng: number) => {
+	const handleCountrySelect = (lat: number, lng: number, name: string) => {
 		if (globeRef.current) {
 			globeRef.current.pointOfView({ lat, lng, altitude: 1.5 }, 1000);
-			globeRef.current.addPinMarker(lat, lng);
+			globeRef.current.addPinMarker(lat, lng, name);
 		}
 	};
 
