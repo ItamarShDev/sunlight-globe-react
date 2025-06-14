@@ -1,69 +1,66 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Country } from '../types';
+import { getCountries } from '../api/countries';
 
-export const useCountries = () => {
-    const [countries, setCountries] = useState<Country[]>([]);
-	const [searchTerm, setSearchTerm] = useState("");
-	const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-   
-    const fetchCountries = useCallback(async () => {
-			try {
-				setIsLoading(true);
-				setError(null);
+interface UseCountriesOptions {
+  initialData?: Country[];
+}
 
-				// Use the Vite proxy to avoid CORS issues
-				const response = await fetch('/api/all?fields=name,latlng,timezones', {
-					method: 'GET',
-					headers: {
-						Accept: 'application/json',
-					},
-				});
+export const useCountries = ({ initialData }: UseCountriesOptions = {}) => {
+  const [countries, setCountries] = useState<Country[]>(initialData || []);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(!initialData);
+  const [error, setError] = useState<string | null>(null);
 
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
+  // If we have initial data, we don't need to load it again
+  useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setIsLoading(false);
+    }
+  }, [initialData]);
 
-				const data = await response.json();
+  const refreshCountries = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const freshCountries = await getCountries(true); // Force refresh
+      setCountries(freshCountries);
+      setError(null);
+      return freshCountries;
+    } catch (err) {
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : 'An unknown error occurred while refreshing countries';
+      
+      console.error('Error refreshing countries:', err);
+      setError(errorMessage);
+      
+      // Re-throw the error so components can handle it if needed
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-				if (!Array.isArray(data) || data.length === 0) {
-					throw new Error('No country data received');
-				}
+  // If no initial data was provided, load it on mount
+  useEffect(() => {
+    if (!initialData) {
+      refreshCountries().catch(() => {
+        // Error is already handled in refreshCountries
+      });
+    }
+  }, [initialData, refreshCountries]);
 
-				const validCountries = data.filter(
-					(country: any) =>
-						country.name?.common &&
-						country.latlng?.length === 2 &&
-						country.timezones,
-				);
-
-				if (validCountries.length === 0) {
-					throw new Error("No valid countries found");
-				}
-
-				setCountries(validCountries);
-			} catch (error) {
-				setError(
-					`Failed to load countries: ${error instanceof Error ? error.message : "Unknown error"}`,
-				);
-			} finally {
-				setIsLoading(false);
-			}
-		}, []);
-
-    useEffect(() => {
-        fetchCountries();
-    }, [fetchCountries]);
-
-    return {
-        countries,
-        searchTerm,
-        selectedCountry,
-        isLoading,
-        error,
-        fetchCountries,
-        setSearchTerm,
-        setSelectedCountry,
-    };
+  return {
+    countries,
+    searchTerm,
+    selectedCountry,
+    isLoading,
+    error,
+    refreshCountries,
+    setSearchTerm,
+    setSelectedCountry,
+  };
 };

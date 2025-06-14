@@ -1,24 +1,32 @@
-import { useRef } from "react";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import "./App.css";
-import { CountryList } from "./components/CountryList";
-import { Globe, type GlobeMethods } from "./components/Globe";
+import { GlobePage } from "./pages/GlobePage";
+import { getCountries } from "./api/countries";
+
+// Create the router with a loader for the GlobePage
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <GlobePage />,
+    loader: async () => {
+      try {
+        const countries = await getCountries();
+        return { countries };
+      } catch (error) {
+        console.error("Error in route loader:", error);
+        // Return empty array to prevent the page from failing to load
+        return { countries: [] };
+      }
+    },
+  },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />,
+  },
+]);
 
 function App() {
-	const globeRef = useRef<GlobeMethods>(null);
-
-	const handleCountrySelect = (lat: number, lng: number, name: string) => {
-		if (globeRef.current) {
-			globeRef.current.pointOfView({ lat, lng, altitude: 1.5 }, 1000);
-			globeRef.current.addPinMarker(lat, lng, name);
-		}
-	};
-
-	return (
-		<div className="app">
-			<Globe ref={globeRef} />
-			<CountryList onSelectCountry={handleCountrySelect} />
-		</div>
-	);
+  return <RouterProvider router={router} />;
 }
 
 export default App;
