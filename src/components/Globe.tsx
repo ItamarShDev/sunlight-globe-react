@@ -5,14 +5,25 @@ import { getSunPosition } from "../utils/sunPosition";
 const TIME_UPDATE_INTERVAL = 60000; // 1 minute
 const DEFAULT_ALTITUDE = 2.5;
 
-export const Globe = forwardRef((_, ref) => {
+interface GlobeMethods {
+  pointOfView: (coords: { lat: number; lng: number; altitude?: number }, duration: number) => void;
+  addPinMarker: (lat: number, lng: number, name: string) => void;
+  clearMarkers: () => void;
+}
+
+export const Globe = forwardRef<GlobeMethods>((_, ref) => {
 	const containerRef = useRef<HTMLDivElement>(null);
-	const { globe, updateSunPosition, pointOfView, addPinMarker, clearMarkers } =
-		useGlobe(containerRef);
+	const { globe, updateSunPosition, pointOfView, addPinMarker, clearMarkers } = useGlobe(
+		containerRef as React.RefObject<HTMLDivElement>
+	);
 
 	useImperativeHandle(ref, () => ({
-		pointOfView: (coords, duration) => globe && pointOfView(coords.lat, coords.lng, coords.altitude, duration),
-		addPinMarker: (lat, lng, name) => globe && addPinMarker(lat, lng, name),
+		pointOfView: (coords: { lat: number; lng: number; altitude?: number }, duration: number) => {
+			if (!globe) return;
+			const { lat, lng, altitude = DEFAULT_ALTITUDE } = coords;
+			pointOfView(lat, lng, altitude, duration);
+		},
+		addPinMarker: (lat: number, lng: number, name: string) => globe && addPinMarker(lat, lng, name),
 		clearMarkers: () => globe && clearMarkers(),
 	}));
 

@@ -17,7 +17,7 @@ function App() {
 	return (
 		<div className="app">
 			<Globe ref={globeRef} />
-			<CountryList onCountrySelect={handleCountrySelect} />
+			<CountryList onSelectCountry={handleCountrySelect} />
 		</div>
 	);
 }

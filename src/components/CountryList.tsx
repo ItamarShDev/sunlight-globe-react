@@ -19,34 +19,22 @@ export const CountryList = ({ onSelectCountry }: CountryListProps) => {
 				setIsLoading(true);
 				setError(null);
 
-				// Try multiple endpoints
-				const endpoints = [
-					"https://restcountries.com/v3.1/all",
-					"https://restcountries.com/v2/all",
-					"https://countries-api.com/countries",
-				];
+				// Use the Vite proxy to avoid CORS issues
+				const response = await fetch('/api/all?fields=name,latlng,timezones', {
+					method: 'GET',
+					headers: {
+						Accept: 'application/json',
+					},
+				});
 
-				let data = null;
-				for (const endpoint of endpoints) {
-					try {
-						const response = await fetch(endpoint, {
-							method: "GET",
-							headers: {
-								Accept: "application/json",
-							},
-						});
-
-						if (!response.ok) {
-							continue;
-						}
-
-						data = await response.json();
-						break;
-					} catch (fetchError) {}
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
 				}
 
-				if (!data) {
-					throw new Error("Failed to fetch countries from all endpoints");
+				const data = await response.json();
+
+				if (!Array.isArray(data) || data.length === 0) {
+					throw new Error('No country data received');
 				}
 
 				const validCountries = data.filter(
